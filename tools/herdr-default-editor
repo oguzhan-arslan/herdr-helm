@@ -1,0 +1,36 @@
+#!/usr/bin/swift
+// herdr-default-editor [bundle id] [extension...]
+// Makes an editor (default: VS Code) the macOS default app for code and text files, so
+// links that agents print in a terminal open there. Prints each type and the result.
+// Give extensions after the bundle id to add file types that the list below does not have.
+// Never html or htm: macOS ties the default web browser to public.html, so it would
+// also move http and https links away from the browser.
+
+import Foundation
+import UniformTypeIdentifiers
+import CoreServices
+
+let args = Array(CommandLine.arguments.dropFirst())
+let bundle = args.first ?? "com.microsoft.VSCode"
+// Text, config, and the source files of common languages.
+let extensions = [
+  "md", "markdown", "txt", "log", "csv", "tsv",
+  "json", "jsonc", "yaml", "yml", "toml", "xml", "ini", "conf", "cfg", "env", "editorconfig",
+  "js", "jsx", "mjs", "cjs", "ts", "tsx", "css", "scss",
+  "py", "rb", "php", "go", "rs", "java", "kt", "cs", "swift", "c", "h", "cpp", "hpp",
+  "sh", "bash", "zsh", "sql", "graphql", "proto", "dockerfile", "gitignore", "lock", "diff", "patch",
+] + args.dropFirst()
+
+var failed = 0
+for ext in extensions {
+  // Every type that claims the extension: apps declare their own (Rider for .cs, VS Code for
+  // TypeScript), and the system's first match can be another kind of file (.ts is a video).
+  var ids = Set(UTType.types(tag: ext, tagClass: .filenameExtension, conformingTo: nil).map(\.identifier))
+  if let type = UTType(filenameExtension: ext) { ids.insert(type.identifier) }
+  for id in ids.sorted() where !id.hasPrefix("dyn.") || ids.count == 1 {
+    let status = LSSetDefaultRoleHandlerForContentType(id as CFString, .all, bundle as CFString)
+    print("\(ext) (\(id)): \(status == noErr ? "set" : "error \(status)")")
+    if status != noErr { failed += 1 }
+  }
+}
+exit(failed == 0 ? 0 : 1)

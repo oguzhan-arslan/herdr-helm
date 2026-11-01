@@ -1,0 +1,9 @@
+{
+  "place": "none",
+  "title": "Helm menu",
+  "overlay": {
+    "kind": "popup",
+    "width": 300,
+    "height": 760
+  }
+}

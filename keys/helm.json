@@ -1,0 +1,40 @@
+{
+  "layout:helm": {
+    "cmd-n": "helm-bar.new_space",
+    "ctrl-n": "helm-bar.new_space",
+    "alt-space": "helm-bar.spaces",
+    "alt-tab": "helm-bar.switch",
+    "alt-shift-tab": "helm-bar.switch_back",
+    "shift-f2": "helm-bar.rename",
+    "cmd-shift-f2": "helm-bar.smart",
+    "cmd-d": "tab.new",
+    "cmd-shift-d": "tab.new",
+    "cmd-shift-t": "helm-bar.agent",
+    "cmd-]": "helm-bar.next",
+    "cmd-[": "helm-bar.prev",
+    "cmd-1": "helm-bar.tile1",
+    "cmd-2": "helm-bar.tile2",
+    "cmd-3": "helm-bar.tile3",
+    "cmd-4": "helm-bar.tile4",
+    "cmd-5": "helm-bar.tile5",
+    "cmd-6": "helm-bar.tile6",
+    "cmd-7": "helm-bar.tile7",
+    "cmd-8": "helm-bar.tile8",
+    "cmd-9": "helm-bar.tile9",
+    "cmd-shift-m": "helm-bar.main",
+    "cmd-shift-enter": "helm-bar.zoom",
+    "cmd-shift-r": "helm-bar.restart",
+    "cmd-w": "helm-bar.close",
+    "cmd-shift-e": "helm-bar.files",
+    "cmd-shift-c": "helm-bar.changes",
+    "cmd-shift-g": "helm-bar.github",
+    "cmd-shift-u": "helm-bar.usage",
+    "cmd-shift-,": "helm-bar.settings",
+    "cmd-k": "helm-bar.menu"
+  },
+  "mod:helm-spaces": {
+    "alt-tab": "helm-spaces.next",
+    "alt-shift-tab": "helm-spaces.prev",
+    "alt-space": "helm-spaces.close"
+  }
+}

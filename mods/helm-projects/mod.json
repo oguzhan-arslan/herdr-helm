@@ -1,0 +1,9 @@
+{
+  "place": "none",
+  "title": "Helm Settings",
+  "overlay": {
+    "kind": "dialog",
+    "width": 860,
+    "height": 620
+  }
+}

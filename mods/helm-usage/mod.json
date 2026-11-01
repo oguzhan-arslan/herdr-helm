@@ -1,0 +1,9 @@
+{
+  "place": "none",
+  "title": "Usage",
+  "overlay": {
+    "kind": "popup",
+    "width": 300,
+    "height": 90
+  }
+}

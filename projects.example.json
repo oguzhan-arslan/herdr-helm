@@ -1,0 +1,33 @@
+{
+  "tasks_root": "~/herdr/tasks",
+  "projects": {
+    "work": {
+      "root": "~/code",
+      "exclude": [],
+      "defaults": [
+        "web"
+      ],
+      "repos": {
+        "web": {
+          "copy": [
+            ".env.local"
+          ],
+          "setup": "npm install"
+        }
+      }
+    }
+  },
+  "connectors": {
+    "code_host": "github",
+    "agent": "claude-code",
+    "editor": "vscode"
+  },
+  "code_host_settings": {
+    "host": "github.com",
+    "org": "your-org",
+    "refresh_minutes": 5
+  },
+  "agent_settings": {
+    "usage": false
+  }
+}

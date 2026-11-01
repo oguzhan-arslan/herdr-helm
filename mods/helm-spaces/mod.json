@@ -1,0 +1,9 @@
+{
+  "place": "none",
+  "title": "Spaces",
+  "overlay": {
+    "kind": "popup",
+    "width": 980,
+    "height": 620
+  }
+}
