@@ -233,13 +233,18 @@ pub fn cmd_sessions(c: &Ctx, a: &SessionsArgs) -> Result<()> {
     let start = core_start()?;
     // The read, the change and the write of sessions.json happen under its lock.
     if a.action == "save" {
-        let rec = locked(&sessions_file(), || {
+        // herdr-core can start again under a running window, and that ends every agent. The
+        // window then does not start Helm again, so `save` resumes what the restart ended.
+        let can_resume = agent.capabilities().iter().any(|x| x == "resume");
+        let (rec, resumed) = locked(&sessions_file(), || {
             let mut rec = load_sessions();
+            let resumed = if can_resume { resume_ended(agent.as_ref(), &mut rec, &terms, start) } else { Vec::new() };
             save_running(agent.as_ref(), &mut rec, &terms, start)?;
-            Ok(rec)
+            Ok((rec, resumed))
         })?;
-        let text = format!("{} {} sessions recorded.", rec.len(), agent.label());
-        out(&Value::Object(rec), &text, c.json);
+        let mut lines = vec![format!("{} {} sessions recorded.", rec.len(), agent.label())];
+        lines.extend(resumed_lines(&resumed));
+        out(&json!({ "sessions": rec, "resumed": resumed }), &lines.join("\n"), c.json);
         return Ok(());
     }
     let resumed = locked(&sessions_file(), || {
@@ -248,10 +253,13 @@ pub fn cmd_sessions(c: &Ctx, a: &SessionsArgs) -> Result<()> {
         save_sessions(&rec)?;
         Ok(resumed)
     })?;
-    let text =
-        resumed.iter().map(|r| format!("Resumed {} in {}", or_dash(&r["session"]), or_dash(&r["address"]))).collect::<Vec<_>>().join("\n");
+    let text = resumed_lines(&resumed).join("\n");
     out(&json!({ "resumed": resumed }), if text.is_empty() { "Nothing to resume." } else { &text }, c.json);
     Ok(())
+}
+
+fn resumed_lines(resumed: &[Value]) -> Vec<String> {
+    resumed.iter().map(|r| format!("Resumed {} in {}", or_dash(&r["session"]), or_dash(&r["address"]))).collect()
 }
 
 /// Records the session of each terminal where the agent runs, and forgets those the person ended.

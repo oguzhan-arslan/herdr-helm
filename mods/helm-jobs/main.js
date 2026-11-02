@@ -119,12 +119,13 @@ export default class Jobs extends View {
 
   // Agent tabs that a shutdown ended come back. At start, `herdr-helm sessions resume` types
   // the agent's resume command into each recovered shell. Every 30 s, `save` records which
-  // session runs in which terminal. Both only act on what changed, so a reload is safe.
+  // session runs in which terminal. `save` also resumes what a restart of herdr-core ended
+  // while this window ran. Both only act on what changed, so a reload is safe.
   sessions(cx, action) {
     if (!can("agent", "sessions")) return;
     this.once(`sessions-${action}`, cx, async () => {
       const r = await helm(["sessions", action]);
-      const resumed = action === "resume" ? r.data?.resumed ?? [] : [];
+      const resumed = r.data?.resumed ?? [];
       if (resumed.length) notify({ title: `Resumed ${resumed.length} agent ${resumed.length === 1 ? "session" : "sessions"}`,
         body: resumed.map((x) => x.cwd.split("/").pop()).join(", "), level: "success" });
     });

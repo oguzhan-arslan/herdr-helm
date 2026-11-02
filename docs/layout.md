@@ -100,8 +100,9 @@ its own space by mistake.
 
 Every 30 seconds, `herdr-helm sessions save` records which agent session runs in which terminal.
 herdr-core brings kept terminals back as shells after a shutdown. When Herdr starts,
-`herdr-helm sessions resume` types the agent's resume command into each of them. A session that
-you ended yourself does not come back.
+`herdr-helm sessions resume` types the agent's resume command into each of them. herdr-core can
+also start again while the Herdr window runs. Then the next `sessions save` resumes the sessions,
+within 30 seconds. A session that you ended yourself does not come back.
 
 ## Opening links from a terminal
 
