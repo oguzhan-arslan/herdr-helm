@@ -109,21 +109,17 @@ pub fn cmd_spawn(c: &Ctx, a: &SpawnArgs) -> Result<()> {
         }
     };
     let prompt = spawn_prompt(&a.name, space, &work, &space_dir, a.checkout.is_some(), &a.task);
-    let mut labels: Vec<String> = vec!["--label".into(), "herdr.role=handoff".into()];
-    let mut note = String::new();
-    let mut tab = None;
-    if !a.no_tab {
-        // A tab id Herdr does not know becomes a new tab in that space. terminal.keep would put
-        // the tab in whatever space is on screen.
-        match herdr_space_id(&rec, &space_dir, &terminals()?) {
-            Some(sid) => {
-                let id = format!("tb{}", random_hex());
-                labels.extend(["--label".into(), format!("herdr.space={sid}"), "--label".into(), format!("herdr.tab={id}")]);
-                tab = Some(id);
-            }
-            None => note = " It has no tab of its own, because the space is not open in Herdr.".into(),
-        }
-    }
+    // A handoff agent always gets a tab in its own space, so the person can watch and steer it.
+    // A tab id Herdr does not know becomes a new tab in that space. terminal.keep would put the
+    // tab in whatever space is on screen.
+    let Some(sid) = herdr_space_id(&rec, &space_dir, &terminals()?) else {
+        fail!("The space {space} is not open in Herdr, so a handoff agent gets no tab. Open the space in Herdr first.");
+    };
+    let tab = format!("tb{}", random_hex());
+    let labels: Vec<String> =
+        ["--label", "herdr.role=handoff", "--label", &format!("herdr.space={sid}"), "--label", &format!("herdr.tab={tab}")]
+            .map(String::from)
+            .to_vec();
     let argv = agent::space_argv(&rec)?;
     let dir = space_dir.to_string_lossy();
     let mut args: Vec<&str> = vec!["run", "--bg", "--json", "--name", &full, "--cwd", &dir, "--outlive-parent"];
@@ -131,15 +127,10 @@ pub fn cmd_spawn(c: &Ctx, a: &SpawnArgs) -> Result<()> {
     args.push("--");
     args.extend(argv.iter().map(String::as_str));
     args.push(&prompt);
-    let mut result: Value = serde_json::from_str(&hc(&args)?).map_err(|e| anyhow!("hc run gave no JSON: {e}"))?;
-    if let Some(id) = &tab {
-        name_tab(id, &a.name);
-    }
+    let result: Value = serde_json::from_str(&hc(&args)?).map_err(|e| anyhow!("hc run gave no JSON: {e}"))?;
+    name_tab(&tab, &a.name);
     let addr = result["address"].as_str().unwrap_or("-").to_string();
-    if let Value::Object(o) = &mut result {
-        o.insert("note".into(), if note.is_empty() { Value::Null } else { json!(note.trim()) });
-    }
-    out(&result, &format!("Started {full} as {addr}.{note} Wait for its report with: herdr-helm wait"), c.json);
+    out(&result, &format!("Started {full} as {addr} in the tab '{}'. Wait for its report with: herdr-helm wait", a.name), c.json);
     Ok(())
 }
 
@@ -148,10 +139,12 @@ fn spawn_prompt(name: &str, space: &str, work: &Path, space_dir: &Path, own_chec
         Ok(me) => format!("herdr-helm send {me} \"<result or blocker>\""),
         Err(_) => "herdr-helm agents (find who started you)".into(),
     };
-    let more = if own_checkout { "" } else { " and the checkouts the task names" };
+    let more = if own_checkout { ". You own this checkout and can change its files freely" } else { " and the checkouts the task names" };
     format!(
         "You are the handoff agent '{name}' in the Herdr space '{space}'. Read the task-workspace skill first. \
          Work only in {}{more}. Do not start other handoff agents unless the task says so. \
+         You can start your own subagents with the Agent tool, and for a big task you should: give each one \
+         a part of the work in your folder. \
          When you are done or stuck, report with: {report}. \
          Put long results in {}/.notes/{name}.md and send only the path.\n\nTask: {task}",
         work.display(),

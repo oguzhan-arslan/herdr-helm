@@ -24,4 +24,7 @@ Repos you can add: $available
 - Each repo can have its own `CLAUDE.md`. Read it before you change that repo.
 - Use the `task-workspace` skill to add a repo, to work in parallel, and to talk
   to other agents in this space.
+- For real work, start a handoff agent (`herdr-helm spawn`) in its own checkout
+  (`herdr-helm add <repo> --as <name>`). It gets a tab, so the user can watch it.
+  Use the Agent tool only for a small lookup that you need yourself.
 - Do not run `herdr-helm complete` or `herdr-helm delete`. Only the user ends a space.

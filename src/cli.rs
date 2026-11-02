@@ -192,9 +192,6 @@ pub struct SpawnArgs {
     /// The checkout it works in, e.g. web.api.
     #[arg(long)]
     pub checkout: Option<String>,
-    /// No tab of its own: open it with peek.
-    #[arg(long)]
-    pub no_tab: bool,
 }
 
 #[derive(Args)]
