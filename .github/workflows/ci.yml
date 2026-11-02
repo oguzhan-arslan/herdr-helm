@@ -1,6 +1,7 @@
 # Checks on each push to main, on each pull request, and on each tag.
-# A tag v<version> also builds the release files that install.sh downloads:
+# Each push builds the release files that install.sh downloads:
 #   herdr-helm-<target>.tar.gz and herdr-helm-<target>.tar.gz.sha256
+# Only a tag v<version> publishes them as a release.
 # The tag must match the version in Cargo.toml.
 # The actions are pinned to commit SHAs, because the release job can write to the repo.
 name: ci
@@ -54,26 +55,42 @@ jobs:
           cargo +"$msrv" build --locked
 
   build:
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Each push to main builds too, so a broken build shows before a release. Only a tag
+    # publishes the files.
+    if: github.event_name == 'push'
     needs: [lint, test, msrv]
     strategy:
       matrix:
         include:
-          - { os: macos-latest, target: aarch64-apple-darwin }
-          - { os: macos-latest, target: x86_64-apple-darwin }
+          # The macOS programs build on Linux with cargo-zigbuild, so a release does not wait
+          # for a macOS runner. Zig 0.13 builds for macOS 11.7 and later. Newer Zig versions
+          # build only for macOS 13 and later. Herdr itself needs macOS 11.0.
+          - { os: ubuntu-latest, target: aarch64-apple-darwin, zig: true }
+          - { os: ubuntu-latest, target: x86_64-apple-darwin, zig: true }
           - { os: ubuntu-latest, target: x86_64-unknown-linux-musl }
           - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Check that the tag matches Cargo.toml
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
           test "${GITHUB_REF_NAME}" = "v${version}" || { echo "tag ${GITHUB_REF_NAME} is not v${version}"; exit 1; }
-      - if: runner.os == 'Linux'
+      - if: ${{ !matrix.zig }}
         run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - if: ${{ matrix.zig }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zig"
+          "$RUNNER_TEMP/zig/bin/pip" install ziglang==0.13.0 cargo-zigbuild==0.23.4
+          echo "$RUNNER_TEMP/zig/bin" >> "$GITHUB_PATH"
       - run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }} && rustup default stable
-      - run: cargo build --locked --release --target ${{ matrix.target }}
+      - if: ${{ !matrix.zig }}
+        run: cargo build --locked --release --target ${{ matrix.target }}
+      - if: ${{ matrix.zig }}
+        run: cargo zigbuild --locked --release --target ${{ matrix.target }}
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
       - name: Pack
         run: |
           name=herdr-helm-${{ matrix.target }}.tar.gz
@@ -85,6 +102,7 @@ jobs:
           path: herdr-helm-${{ matrix.target }}.tar.gz*
 
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
