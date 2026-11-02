@@ -53,7 +53,18 @@ pub fn exec_with(program: &str, args: &[&str], cwd: Option<&Path>, stdin: Option
         use std::os::unix::process::CommandExt;
         cmd.process_group(0);
     }
-    let mut child = cmd.spawn().map_err(|e| anyhow!("{program}: {e}"))?;
+    // On Linux, a program that was just written can be "busy" for a moment: a fork in another
+    // thread can hold the file open for writing until its exec. Try again for a short time.
+    let mut tries = 0;
+    let mut child = loop {
+        match cmd.spawn() {
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy && tries < 20 => {
+                tries += 1;
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            other => break other.map_err(|e| anyhow!("{program}: {e}"))?,
+        }
+    };
     let writer = match (stdin, child.stdin.take()) {
         (Some(text), Some(mut pipe)) => {
             let text = text.to_string();
